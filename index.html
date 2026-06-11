@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Alinhamentos</title>
+<style>
+  :root {
+    --bg: #2B2B29;
+    --col: #33332F;
+    --card: #3D3D39;
+    --card-sel: #4A3A36;
+    --text: #EDEBE4;
+    --suave: #B2AFA5;
+    --accent: #DE8579;
+    --linha: #4C4C47;
+    --perigo: #A8392E;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+    padding: 14px 12px 40px;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; }
+  button {
+    background: transparent;
+    border: 1px solid var(--linha);
+    color: var(--suave);
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 12px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  button:active { transform: translateY(1px); }
+  input, select {
+    background: var(--card);
+    border: 1px solid var(--linha);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 14px;
+    font-family: inherit;
+    width: 100%;
+  }
+  input:focus, select:focus, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+  .topo { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+  .topo select { width: auto; flex: 1; min-width: 140px; font-weight: 600; }
+  #estado-sync { font-size: 12px; color: var(--suave); min-width: 80px; }
+  .aviso { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--accent); margin-bottom: 12px; flex-wrap: wrap; }
+  .linha-form { display: flex; gap: 6px; margin-bottom: 14px; }
+
+  .grelha { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 10px; }
+  .coluna { background: var(--col); border-radius: 12px; padding: 10px; min-height: 240px; }
+  .coluna.alvo-set { outline: 2px solid var(--accent); }
+  .coluna.alvo-pool { outline: 2px solid var(--suave); }
+  .titulo-col { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; font-weight: 600; margin-bottom: 10px; }
+  .titulo-col.set { color: var(--accent); }
+  .titulo-col.pool { color: var(--suave); }
+
+  .cartao {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--card);
+    border: 1px solid var(--linha);
+    border-radius: 10px;
+    padding: 9px 10px;
+    margin-bottom: 6px;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .cartao.sel { background: var(--card-sel); border-color: rgba(222,133,121,0.45); }
+  .cartao.fantasma-origem { opacity: 0.35; }
+  .pega {
+    touch-action: none;
+    color: var(--suave);
+    font-size: 16px;
+    line-height: 1;
+    padding: 6px 4px;
+    margin: -6px 0;
+    cursor: grab;
+    flex-shrink: 0;
+    letter-spacing: 1px;
+  }
+  .cartao-titulo { flex: 1; min-width: 0; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .num { color: var(--accent); font-variant-numeric: tabular-nums; margin-right: 6px; }
+  .dur { font-size: 13px; color: var(--suave); font-variant-numeric: tabular-nums; font-family: ui-monospace, monospace; flex-shrink: 0; }
+  .cartao.sel .dur { color: var(--accent); }
+  .btn-x { padding: 2px 7px; font-size: 12px; flex-shrink: 0; }
+  .btn-x.armado { background: var(--perigo); border-color: var(--perigo); color: #fff; }
+  .btn-perigo.armado { background: var(--perigo); border-color: var(--perigo); color: #fff; }
+
+  .insercao { height: 3px; background: var(--accent); border-radius: 2px; margin: 1px 0; }
+  .vazio { font-size: 13px; color: var(--suave); padding: 12px 4px; line-height: 1.5; }
+
+  .rodape-set { border-top: 1px solid var(--linha); margin-top: 10px; padding-top: 10px; display: flex; justify-content: space-between; align-items: center; }
+  .total { font-size: 16px; font-weight: 600; color: var(--accent); font-family: ui-monospace, monospace; }
+  .btn-largo { width: 100%; margin-top: 8px; padding: 8px 10px; }
+
+  .nota { font-size: 12px; color: var(--suave); margin-top: 14px; line-height: 1.6; }
+
+  #fantasma {
+    position: fixed;
+    background: var(--card-sel);
+    border: 1px solid var(--accent);
+    color: var(--text);
+    border-radius: 10px;
+    padding: 7px 12px;
+    font-size: 13px;
+    pointer-events: none;
+    z-index: 100;
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: none;
+  }
+
+  #ecra-config { max-width: 520px; margin: 40px auto; line-height: 1.6; }
+  #ecra-config h1 { font-size: 18px; margin-bottom: 12px; }
+  #ecra-config p { font-size: 14px; color: var(--suave); margin-bottom: 14px; }
+  #ecra-config input { margin-bottom: 10px; }
+</style>
+</head>
+<body>
+
+<div id="ecra-config" style="display:none;">
+  <h1>Configurar sincronização</h1>
+  <p>Cola aqui o endereço de sincronização da banda (quem montou a base de dados sabe qual é). Fica guardado neste dispositivo.</p>
+  <input type="url" id="config-url" placeholder="https://…firebasedatabase.app/alinhamentos/TOKEN.json">
+  <button id="config-ok">Guardar e entrar</button>
+</div>
+
+<div class="wrap" id="app" style="display:none;">
+  <div class="topo" id="topo-normal">
+    <select id="sel-setlist" aria-label="Escolher setlist"></select>
+    <button id="btn-renomear">renomear</button>
+    <button id="btn-nova">+ nova</button>
+    <button id="btn-apagar-sl" class="btn-perigo">apagar</button>
+    <button id="btn-atualizar">atualizar</button>
+    <span id="estado-sync"></span>
+  </div>
+  <div class="linha-form" id="form-renomear" style="display:none;">
+    <input id="inp-renomear" placeholder="Novo nome…">
+    <button id="btn-renomear-ok">ok</button>
+  </div>
+  <div class="linha-form" id="form-nova" style="display:none;">
+    <input id="inp-nova" placeholder="Nome da nova setlist…">
+    <button id="btn-nova-ok">criar</button>
+  </div>
+  <div class="aviso" id="aviso-offline" style="display:none;">
+    <span>Sem ligação — alterações guardadas neste dispositivo; sincronizam quando houver rede.</span>
+  </div>
+
+  <div class="grelha">
+    <div class="coluna" data-col="set" id="col-set">
+      <div class="titulo-col set">Setlist</div>
+      <div id="lista-set"></div>
+      <div class="rodape-set">
+        <span id="contagem" style="font-size:12px;color:var(--suave);"></span>
+        <span class="total" id="total">0:00</span>
+      </div>
+      <button class="btn-largo" id="btn-copiar" style="display:none;">copiar alinhamento</button>
+    </div>
+    <div class="coluna" data-col="pool" id="col-pool">
+      <div class="titulo-col pool">De fora</div>
+      <div style="margin-bottom:10px;">
+        <input id="inp-titulo" placeholder="Título da música" style="margin-bottom:6px;">
+        <div style="display:flex;gap:6px;">
+          <input id="inp-dur" placeholder="Duração: 345 → 3:45" inputmode="numeric" style="flex:1;">
+          <button id="btn-add" style="padding:8px 14px;" aria-label="Adicionar música">+</button>
+        </div>
+      </div>
+      <div id="lista-pool"></div>
+    </div>
+  </div>
+
+  <div class="nota">
+    Toque rápido num cartão move-o para a outra coluna. O símbolo ⠿ arrasta — para reordenar ou mover entre colunas. A sincronização com a banda é automática (verifica de 20 em 20 segundos); usa "atualizar" para forçar.
+  </div>
+</div>
+
+<div id="fantasma"></div>
+
+<script>
+const DB_EMBUTIDO = "https://glockenwiser-default-rtdb.europe-west1.firebasedatabase.app/alinhamentos/zfYeje-aWo2LsnNKIc8ilI5Z.json";
+const LS_DADOS = "alinhamentos-dados-v1";
+const LS_CONFIG = "alinhamentos-config-v1";
+
+let estado = { songs: [], setlists: [{ id: "sl-inicial", name: "Setlist 1", order: [] }], rev: 0 };
+let ativoId = "sl-inicial";
+let configUrl = "";
+let aGuardarRemoto = false;
+let timerSave = null;
+let armado = null;
+let armadoTimer = null;
+let drag = null;
+let hoverAlvo = null;
+
+const $ = id => document.getElementById(id);
+
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+function fmt(sec) { const m = Math.floor(sec / 60), s = sec % 60; return m + ":" + String(s).padStart(2, "0"); }
+function maskDur(raw) {
+  const d = raw.replace(/[^0-9]/g, "").slice(0, 5);
+  return d.length <= 2 ? d : d.slice(0, -2) + ":" + d.slice(-2);
+}
+function parseDur(str) {
+  const t = (str || "").trim();
+  if (!t) return null;
+  if (t.includes(":")) {
+    const [m, s] = t.split(":");
+    const mm = parseInt(m, 10), ss = parseInt(s, 10);
+    if (isNaN(mm) || isNaN(ss) || ss >= 60 || ss < 0 || mm < 0) return null;
+    return mm * 60 + ss;
+  }
+  const n = parseInt(t, 10);
+  return isNaN(n) || n < 0 ? null : n;
+}
+function esc(s) {
+  return s.replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+function ativa() {
+  return estado.setlists.find(s => s.id === ativoId) || estado.setlists[0];
+}
+function persistLocal() {
+  try { localStorage.setItem(LS_DADOS, JSON.stringify(estado)); } catch (e) {}
+}
+function setEstadoSync(txt, apagar) {
+  $("estado-sync").textContent = txt;
+  if (apagar) setTimeout(() => { if ($("estado-sync").textContent === txt) $("estado-sync").textContent = ""; }, 2500);
+}
+
+function mutar(fn) {
+  fn(estado);
+  estado.rev = Date.now();
+  persistLocal();
+  render();
+  agendarSaveRemoto();
+}
+
+function agendarSaveRemoto() {
+  if (!configUrl) return;
+  if (timerSave) clearTimeout(timerSave);
+  setEstadoSync("a guardar…");
+  timerSave = setTimeout(guardarRemoto, 1200);
+}
+
+async function guardarRemoto() {
+  if (!configUrl) return;
+  aGuardarRemoto = true;
+  try {
+    const r = await fetch(configUrl, { method: "PUT", body: JSON.stringify(estado) });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    $("aviso-offline").style.display = "none";
+    setEstadoSync("sincronizado", true);
+  } catch (e) {
+    $("aviso-offline").style.display = "flex";
+    setEstadoSync("");
+  }
+  aGuardarRemoto = false;
+}
+
+async function puxarRemoto(manual) {
+  if (!configUrl) return;
+  if (timerSave || aGuardarRemoto) return;
+  try {
+    const r = await fetch(configUrl);
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    const remoto = await r.json();
+    $("aviso-offline").style.display = "none";
+    if (remoto === null) { guardarRemoto(); return; }
+    if (remoto.rev > estado.rev) {
+      estado = remoto;
+      if (!estado.setlists.find(s => s.id === ativoId)) ativoId = estado.setlists[0].id;
+      persistLocal();
+      render();
+      if (manual) setEstadoSync("atualizado", true);
+    } else if (manual) {
+      setEstadoSync("já atualizado", true);
+    }
+  } catch (e) {
+    $("aviso-offline").style.display = "flex";
+  }
+}
+
+function alternar(id) {
+  mutar(d => {
+    const sl = d.setlists.find(s => s.id === ativa().id);
+    const i = sl.order.indexOf(id);
+    if (i >= 0) sl.order.splice(i, 1); else sl.order.push(id);
+  });
+}
+
+function armar(chave, accao) {
+  if (armado === chave) {
+    armado = null;
+    clearTimeout(armadoTimer);
+    accao();
+    return;
+  }
+  armado = chave;
+  clearTimeout(armadoTimer);
+  armadoTimer = setTimeout(() => { armado = null; render(); }, 2500);
+  render();
+}
+
+function apagarMusica(id) {
+  armar("m-" + id, () => {
+    mutar(d => {
+      d.songs = d.songs.filter(s => s.id !== id);
+      d.setlists.forEach(sl => { sl.order = sl.order.filter(x => x !== id); });
+    });
+  });
+}
+
+function cartaoHTML(s, inSet, idx) {
+  const arm = armado === "m-" + s.id;
+  return '<div class="cartao' + (inSet ? " sel" : "") + (drag && drag.songId === s.id ? " fantasma-origem" : "") + '" data-id="' + s.id + '"' + (inSet ? ' data-setidx="' + idx + '"' : "") + '>' +
+    '<div class="pega" data-pega="' + s.id + '" data-de="' + (inSet ? "set" : "pool") + '" aria-label="Arrastar ' + esc(s.title) + '">⠿</div>' +
+    '<div class="cartao-titulo">' + (inSet ? '<span class="num">' + (idx + 1) + '.</span>' : "") + esc(s.title) + '</div>' +
+    '<div class="dur">' + fmt(s.dur) + '</div>' +
+    (!inSet ? '<button class="btn-x' + (arm ? " armado" : "") + '" data-x="' + s.id + '" aria-label="Apagar ' + esc(s.title) + '">' + (arm ? "apagar?" : "×") + '</button>' : "") +
+    '</div>';
+}
+
+function render() {
+  const sl = ativa();
+  ativoId = sl.id;
+  const porId = Object.fromEntries(estado.songs.map(s => [s.id, s]));
+  const set = sl.order.map(id => porId[id]).filter(Boolean);
+  const pool = estado.songs.filter(s => !sl.order.includes(s.id)).sort((a, b) => a.title.localeCompare(b.title, "pt"));
+
+  $("sel-setlist").innerHTML = estado.setlists.map(s =>
+    '<option value="' + s.id + '"' + (s.id === ativoId ? " selected" : "") + '>' + esc(s.name) + '</option>').join("");
+
+  let htmlSet = "";
+  set.forEach((s, i) => {
+    if (drag && hoverAlvo && hoverAlvo.col === "set" && hoverAlvo.idx === i) htmlSet += '<div class="insercao"></div>';
+    htmlSet += cartaoHTML(s, true, i);
+  });
+  if (drag && hoverAlvo && hoverAlvo.col === "set" && hoverAlvo.idx === set.length) htmlSet += '<div class="insercao"></div>';
+  if (set.length === 0 && !drag) htmlSet = '<div class="vazio">Toca numa música da direita, ou arrasta-a pelo ⠿ para aqui.</div>';
+  $("lista-set").innerHTML = htmlSet;
+
+  $("lista-pool").innerHTML = pool.length
+    ? pool.map(s => cartaoHTML(s, false, 0)).join("")
+    : '<div class="vazio">' + (estado.songs.length === 0 ? "Adiciona a primeira música acima." : "Tudo na setlist.") + '</div>';
+
+  const total = set.reduce((a, s) => a + s.dur, 0);
+  $("total").textContent = fmt(total);
+  $("contagem").textContent = set.length + " música" + (set.length === 1 ? "" : "s");
+  $("btn-copiar").style.display = set.length ? "block" : "none";
+
+  const armSL = armado === "setlist";
+  const b = $("btn-apagar-sl");
+  b.textContent = armSL ? "apagar?" : "apagar";
+  b.classList.toggle("armado", armSL);
+  b.style.display = estado.setlists.length > 1 ? "" : "none";
+
+  $("col-set").classList.toggle("alvo-set", !!(drag && hoverAlvo && hoverAlvo.col === "set"));
+  $("col-pool").classList.toggle("alvo-pool", !!(drag && hoverAlvo && hoverAlvo.col === "pool"));
+}
+
+function moverDrag(e) {
+  if (!drag) return;
+  const f = $("fantasma");
+  f.style.left = (e.clientX + 10) + "px";
+  f.style.top = (e.clientY - 14) + "px";
+  const el = document.elementFromPoint(e.clientX, e.clientY);
+  let novo = null;
+  if (el) {
+    const c = el.closest("[data-setidx]");
+    if (c) {
+      const r = c.getBoundingClientRect();
+      const idx = parseInt(c.getAttribute("data-setidx"), 10);
+      novo = { col: "set", idx: idx + (e.clientY > r.top + r.height / 2 ? 1 : 0) };
+    } else {
+      const col = el.closest("[data-col]");
+      if (col) novo = col.getAttribute("data-col") === "set"
+        ? { col: "set", idx: ativa().order.length }
+        : { col: "pool" };
+    }
+  }
+  if (JSON.stringify(novo) !== JSON.stringify(hoverAlvo)) {
+    hoverAlvo = novo;
+    render();
+  }
+}
+
+function fimDrag() {
+  if (!drag) return;
+  const d = drag, h = hoverAlvo;
+  drag = null; hoverAlvo = null;
+  $("fantasma").style.display = "none";
+  if (h) {
+    mutar(dd => {
+      const sl = dd.setlists.find(s => s.id === ativa().id);
+      const old = sl.order.indexOf(d.songId);
+      if (h.col === "pool") {
+        if (old >= 0) sl.order.splice(old, 1);
+        return;
+      }
+      let idx = h.idx;
+      if (old >= 0) { sl.order.splice(old, 1); if (old < idx) idx--; }
+      idx = Math.max(0, Math.min(idx, sl.order.length));
+      sl.order.splice(idx, 0, d.songId);
+    });
+  } else {
+    render();
+  }
+}
+
+document.addEventListener("pointerdown", e => {
+  const pega = e.target.closest("[data-pega]");
+  if (!pega) return;
+  e.preventDefault();
+  const songId = pega.getAttribute("data-pega");
+  drag = { songId };
+  const s = estado.songs.find(x => x.id === songId);
+  const f = $("fantasma");
+  f.textContent = s ? s.title : "";
+  f.style.display = "block";
+  f.style.left = (e.clientX + 10) + "px";
+  f.style.top = (e.clientY - 14) + "px";
+  try { pega.setPointerCapture(e.pointerId); } catch (err) {}
+  render();
+});
+document.addEventListener("pointermove", moverDrag);
+document.addEventListener("pointerup", fimDrag);
+document.addEventListener("pointercancel", fimDrag);
+
+document.addEventListener("click", e => {
+  const x = e.target.closest("[data-x]");
+  if (x) { apagarMusica(x.getAttribute("data-x")); return; }
+  if (e.target.closest("[data-pega]")) return;
+  const c = e.target.closest(".cartao");
+  if (c && !drag) alternar(c.getAttribute("data-id"));
+});
+
+$("btn-add").addEventListener("click", adicionar);
+$("inp-titulo").addEventListener("keydown", e => { if (e.key === "Enter") adicionar(); });
+$("inp-dur").addEventListener("keydown", e => { if (e.key === "Enter") adicionar(); });
+$("inp-dur").addEventListener("input", e => { e.target.value = maskDur(e.target.value); });
+
+function adicionar() {
+  const t = $("inp-titulo").value.trim();
+  const d = parseDur($("inp-dur").value);
+  if (!t || d === null) return;
+  mutar(dd => { dd.songs.push({ id: uid(), title: t, dur: d }); });
+  $("inp-titulo").value = "";
+  $("inp-dur").value = "";
+  $("inp-titulo").focus();
+}
+
+$("sel-setlist").addEventListener("change", e => { ativoId = e.target.value; render(); });
+$("btn-nova").addEventListener("click", () => {
+  $("form-nova").style.display = $("form-nova").style.display === "none" ? "flex" : "none";
+  $("inp-nova").focus();
+});
+$("btn-nova-ok").addEventListener("click", criarSetlist);
+$("inp-nova").addEventListener("keydown", e => { if (e.key === "Enter") criarSetlist(); });
+function criarSetlist() {
+  const nome = $("inp-nova").value.trim() || "Setlist " + (estado.setlists.length + 1);
+  const id = uid();
+  mutar(d => { d.setlists.push({ id, name: nome, order: [] }); });
+  ativoId = id;
+  $("inp-nova").value = "";
+  $("form-nova").style.display = "none";
+  render();
+}
+
+$("btn-renomear").addEventListener("click", () => {
+  $("inp-renomear").value = ativa().name;
+  $("form-renomear").style.display = "flex";
+  $("topo-normal").style.display = "none";
+  $("inp-renomear").focus();
+});
+$("btn-renomear-ok").addEventListener("click", renomear);
+$("inp-renomear").addEventListener("keydown", e => { if (e.key === "Enter") renomear(); });
+function renomear() {
+  const nome = $("inp-renomear").value.trim();
+  if (nome) mutar(d => { d.setlists.find(s => s.id === ativa().id).name = nome; });
+  $("form-renomear").style.display = "none";
+  $("topo-normal").style.display = "flex";
+}
+
+$("btn-apagar-sl").addEventListener("click", () => {
+  if (estado.setlists.length <= 1) return;
+  armar("setlist", () => {
+    const id = ativa().id;
+    mutar(d => { d.setlists = d.setlists.filter(s => s.id !== id); });
+    ativoId = estado.setlists[0].id;
+    render();
+  });
+});
+
+$("btn-atualizar").addEventListener("click", () => puxarRemoto(true));
+
+$("btn-copiar").addEventListener("click", async () => {
+  const sl = ativa();
+  const porId = Object.fromEntries(estado.songs.map(s => [s.id, s]));
+  const set = sl.order.map(id => porId[id]).filter(Boolean);
+  const total = set.reduce((a, s) => a + s.dur, 0);
+  const txt = sl.name.toUpperCase() + "\n" +
+    set.map((s, i) => (i + 1) + ". " + s.title + " — " + fmt(s.dur)).join("\n") +
+    "\n\nTotal: " + fmt(total);
+  try {
+    await navigator.clipboard.writeText(txt);
+    $("btn-copiar").textContent = "copiado ✓";
+  } catch (e) {
+    const ta = document.createElement("textarea");
+    ta.value = txt; document.body.appendChild(ta); ta.select();
+    try { document.execCommand("copy"); $("btn-copiar").textContent = "copiado ✓"; } catch (e2) {}
+    document.body.removeChild(ta);
+  }
+  setTimeout(() => { $("btn-copiar").textContent = "copiar alinhamento"; }, 2000);
+});
+
+$("config-ok").addEventListener("click", () => {
+  const u = $("config-url").value.trim();
+  if (!u.startsWith("https://") || !u.endsWith(".json")) {
+    $("config-url").style.borderColor = "var(--perigo)";
+    return;
+  }
+  configUrl = u;
+  try { localStorage.setItem(LS_CONFIG, u); } catch (e) {}
+  arrancar();
+});
+
+function arrancar() {
+  $("ecra-config").style.display = "none";
+  $("app").style.display = "block";
+  render();
+  puxarRemoto(false);
+  setInterval(() => {
+    if (document.visibilityState === "visible") puxarRemoto(false);
+  }, 20000);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") puxarRemoto(false);
+  });
+}
+
+(function init() {
+  try {
+    const guardado = localStorage.getItem(LS_DADOS);
+    if (guardado) {
+      estado = JSON.parse(guardado);
+      ativoId = estado.setlists[0].id;
+    }
+  } catch (e) {}
+  configUrl = DB_EMBUTIDO || (function () {
+    try { return localStorage.getItem(LS_CONFIG) || ""; } catch (e) { return ""; }
+  })();
+  if (!configUrl) {
+    $("ecra-config").style.display = "block";
+  } else {
+    arrancar();
+  }
+})();
+</script>
+</body>
+</html>
