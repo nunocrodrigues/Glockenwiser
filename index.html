@@ -3,13 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Alinhamentos</title>
+<title>ROCKENWISE</title>
+<meta name="apple-mobile-web-app-title" content="ROCKENWISE">
 <meta name="theme-color" content="#1D140E">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@600;800;900&display=swap" rel="stylesheet">
 <style>
   :root {
     --bg: #1D140E;
@@ -22,7 +23,7 @@
     --red: #E3471D;
     --linha: #4A3A2B;
     --perigo: #B0341A;
-    --display: "Baloo 2", system-ui, sans-serif;
+    --display: "Rubik", system-ui, sans-serif;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -57,6 +58,25 @@
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   }
   .wrap { max-width: 860px; margin: 0 auto; position: relative; z-index: 1; }
+
+  .cabecalho { margin: 0 -12px 20px; }
+  .cabecalho svg { display: block; width: 100%; height: auto; }
+  .cabecalho text {
+    font-family: var(--display);
+    font-weight: 900;
+    font-size: 100px;
+    fill: var(--accent);
+  }
+  .cabecalho svg { filter: drop-shadow(0 0 16px rgba(216,243,204,0.4)); }
+  .lema {
+    margin-top: 20px;
+    text-align: center;
+    font-size: 13px;
+    font-style: italic;
+    color: var(--suave);
+    letter-spacing: 0.03em;
+    line-height: 1.5;
+  }
   button {
     background: transparent;
     border: 1px solid var(--linha);
@@ -169,6 +189,11 @@
 </div>
 
 <div class="wrap" id="app" style="display:none;">
+  <header class="cabecalho" aria-label="ROCKENWISE">
+    <svg viewBox="0 0 720 108" role="img" aria-hidden="true">
+      <text x="0" y="92" textLength="720" lengthAdjust="spacingAndGlyphs">ROCKENWISE</text>
+    </svg>
+  </header>
   <div class="topo" id="topo-normal">
     <select id="sel-setlist" aria-label="Escolher setlist"></select>
     <button id="btn-renomear">renomear</button>
@@ -212,9 +237,7 @@
     </div>
   </div>
 
-  <div class="nota">
-    Toque rápido num cartão move-o para a outra coluna. O símbolo ⠿ arrasta — para reordenar ou mover entre colunas. A sincronização com a banda é automática (verifica de 20 em 20 segundos); usa "atualizar" para forçar.
-  </div>
+  <p class="lema">O mais importante é não confundir velocidade com andamento.</p>
 </div>
 
 <div id="fantasma"></div>
