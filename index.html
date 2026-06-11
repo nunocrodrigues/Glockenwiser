@@ -4,17 +4,25 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Alinhamentos</title>
+<meta name="theme-color" content="#1D140E">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #2B2B29;
-    --col: #33332F;
-    --card: #3D3D39;
-    --card-sel: #4A3A36;
-    --text: #EDEBE4;
-    --suave: #B2AFA5;
-    --accent: #DE8579;
-    --linha: #4C4C47;
-    --perigo: #A8392E;
+    --bg: #1D140E;
+    --col: #2A1D13;
+    --card: #342518;
+    --card-sel: #30301E;
+    --text: #EFE9DA;
+    --suave: #A99C89;
+    --accent: #D8F3CC;
+    --red: #E3471D;
+    --linha: #4A3A2B;
+    --perigo: #B0341A;
+    --display: "Baloo 2", system-ui, sans-serif;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -22,9 +30,33 @@
     color: var(--text);
     font-family: system-ui, -apple-system, sans-serif;
     min-height: 100vh;
-    padding: 14px 12px 40px;
+    padding: 96px 12px 40px;
+    position: relative;
   }
-  .wrap { max-width: 860px; margin: 0 auto; }
+  #horizonte {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 150px;
+    background: linear-gradient(180deg,
+      #9FB4C7 0%,
+      #D8F3CC 16%,
+      #F3E9C8 27%,
+      #E3471D 46%,
+      #8A2A10 64%,
+      var(--bg) 100%);
+    z-index: 0;
+    pointer-events: none;
+  }
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.08;
+    z-index: 60;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  .wrap { max-width: 860px; margin: 0 auto; position: relative; z-index: 1; }
   button {
     background: transparent;
     border: 1px solid var(--linha);
@@ -49,17 +81,17 @@
   input:focus, select:focus, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
   .topo { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
-  .topo select { width: auto; flex: 1; min-width: 140px; font-weight: 600; }
+  .topo select { width: auto; flex: 1; min-width: 140px; font-weight: 800; font-family: var(--display); letter-spacing: 0.5px; }
   #estado-sync { font-size: 12px; color: var(--suave); min-width: 80px; }
-  .aviso { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--accent); margin-bottom: 12px; flex-wrap: wrap; }
+  .aviso { display: flex; align-items: center; gap: 10px; font-size: 12px; color: #E8865C; margin-bottom: 12px; flex-wrap: wrap; }
   .linha-form { display: flex; gap: 6px; margin-bottom: 14px; }
 
   .grelha { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 10px; }
   .coluna { background: var(--col); border-radius: 12px; padding: 10px; min-height: 240px; }
   .coluna.alvo-set { outline: 2px solid var(--accent); }
   .coluna.alvo-pool { outline: 2px solid var(--suave); }
-  .titulo-col { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; font-weight: 600; margin-bottom: 10px; }
-  .titulo-col.set { color: var(--accent); }
+  .titulo-col { font-family: var(--display); font-size: 13px; letter-spacing: 3px; text-transform: uppercase; font-weight: 800; margin-bottom: 10px; }
+  .titulo-col.set { color: var(--accent); text-shadow: 0 0 12px rgba(216,243,204,0.35); }
   .titulo-col.pool { color: var(--suave); }
 
   .cartao {
@@ -73,7 +105,7 @@
     user-select: none;
     -webkit-user-select: none;
   }
-  .cartao.sel { background: var(--card-sel); border-color: rgba(222,133,121,0.45); }
+  .cartao.sel { background: var(--card-sel); border-color: rgba(216,243,204,0.45); box-shadow: 0 0 10px rgba(216,243,204,0.08); }
   .cartao.fantasma-origem { opacity: 0.35; }
   .pega {
     touch-action: none;
@@ -94,11 +126,11 @@
   .btn-x.armado { background: var(--perigo); border-color: var(--perigo); color: #fff; }
   .btn-perigo.armado { background: var(--perigo); border-color: var(--perigo); color: #fff; }
 
-  .insercao { height: 3px; background: var(--accent); border-radius: 2px; margin: 1px 0; }
+  .insercao { height: 3px; background: var(--accent); border-radius: 2px; margin: 1px 0; box-shadow: 0 0 6px rgba(216,243,204,0.5); }
   .vazio { font-size: 13px; color: var(--suave); padding: 12px 4px; line-height: 1.5; }
 
   .rodape-set { border-top: 1px solid var(--linha); margin-top: 10px; padding-top: 10px; display: flex; justify-content: space-between; align-items: center; }
-  .total { font-size: 16px; font-weight: 600; color: var(--accent); font-family: ui-monospace, monospace; }
+  .total { font-family: var(--display); font-size: 18px; font-weight: 800; color: var(--accent); text-shadow: 0 0 12px rgba(216,243,204,0.4); letter-spacing: 1px; }
   .btn-largo { width: 100%; margin-top: 8px; padding: 8px 10px; }
 
   .nota { font-size: 12px; color: var(--suave); margin-top: 14px; line-height: 1.6; }
@@ -127,6 +159,7 @@
 </style>
 </head>
 <body>
+<div id="horizonte" aria-hidden="true"></div>
 
 <div id="ecra-config" style="display:none;">
   <h1>Configurar sincronização</h1>
