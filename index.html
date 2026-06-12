@@ -241,6 +241,7 @@
   <div class="topo" id="topo-normal">
     <select id="sel-setlist" aria-label="Escolher setlist"></select>
     <button id="btn-renomear">renomear</button>
+    <button id="btn-duplicar">duplicar</button>
     <button id="btn-nova">+ nova</button>
     <button id="btn-apagar-sl" class="btn-perigo">apagar</button>
     <button id="btn-atualizar">atualizar</button>
@@ -298,7 +299,7 @@
 <div class="folha" id="ficha" style="display:none;">
   <h3 id="ficha-titulo"></h3>
   <label for="nota-geral">Nota geral (para todos)</label>
-  <input id="nota-geral" placeholder="ex.: afinação drop D, intro só bateria…">
+  <input id="nota-geral">
   <div id="ficha-membros"></div>
   <button class="btn-largo" id="ficha-fechar">guardar e fechar</button>
 </div>
@@ -432,6 +433,44 @@ async function guardarRemoto() {
   aGuardarRemoto = false;
 }
 
+let fluxo = null;
+
+function adotarRemoto(remoto, manual) {
+  if (!remoto) return;
+  if (remoto.rev > estado.rev) {
+    if (timerSave || aGuardarRemoto) return;
+    estado = remoto;
+    if (!estado.setlists.find(s => s.id === ativoId)) ativoId = estado.setlists[0].id;
+    persistLocal();
+    render();
+    if (manual) setEstadoSync("atualizado", true);
+  } else if (manual) {
+    setEstadoSync("já atualizado", true);
+  }
+}
+
+function ligarFluxo() {
+  if (!configUrl || fluxo) return;
+  try {
+    fluxo = new EventSource(configUrl);
+    const aoEvento = e => {
+      try {
+        const msg = JSON.parse(e.data);
+        if (msg && msg.path === "/" && msg.data) {
+          adotarRemoto(sanear(msg.data), false);
+          $("aviso-offline").style.display = "none";
+          return;
+        }
+      } catch (err) {}
+      puxarRemoto(false);
+    };
+    fluxo.addEventListener("put", aoEvento);
+    fluxo.addEventListener("patch", aoEvento);
+  } catch (e) {
+    fluxo = null;
+  }
+}
+
 async function puxarRemoto(manual) {
   if (!configUrl) return;
   if (timerSave || aGuardarRemoto) return;
@@ -441,15 +480,7 @@ async function puxarRemoto(manual) {
     const remoto = sanear(await r.json());
     $("aviso-offline").style.display = "none";
     if (remoto === null) { guardarRemoto(); return; }
-    if (remoto.rev > estado.rev) {
-      estado = remoto;
-      if (!estado.setlists.find(s => s.id === ativoId)) ativoId = estado.setlists[0].id;
-      persistLocal();
-      render();
-      if (manual) setEstadoSync("atualizado", true);
-    } else if (manual) {
-      setEstadoSync("já atualizado", true);
-    }
+    adotarRemoto(remoto, manual);
   } catch (e) {
     $("aviso-offline").style.display = "flex";
   }
@@ -523,7 +554,7 @@ function render() {
     htmlSet += cartaoHTML(s, true, i, liga, ligaSeg);
   });
   if (drag && hoverAlvo && hoverAlvo.col === "set" && hoverAlvo.idx === set.length) htmlSet += '<div class="insercao"></div>';
-  if (set.length === 0 && !drag) htmlSet = '<div class="vazio">Toca numa música da direita, ou arrasta-a pelo ⠿ para aqui.</div>';
+  if (set.length === 0 && !drag) htmlSet = '<div class="vazio">Setlist vazia.</div>';
   $("lista-set").innerHTML = htmlSet;
 
   $("lista-pool").innerHTML = pool.length
@@ -687,6 +718,23 @@ $("btn-apagar-sl").addEventListener("click", () => {
   });
 });
 
+$("btn-duplicar").addEventListener("click", () => {
+  const orig = ativa();
+  const id = uid();
+  mutar(d => {
+    const o = d.setlists.find(s => s.id === orig.id);
+    d.setlists.push({
+      id,
+      name: o.name + " (cópia)",
+      order: o.order.slice(),
+      segues: Object.assign({}, o.segues || {})
+    });
+  });
+  ativoId = id;
+  render();
+  setEstadoSync("setlist duplicada", true);
+});
+
 $("btn-atualizar").addEventListener("click", () => puxarRemoto(true));
 
 $("btn-copiar").addEventListener("click", async () => {
@@ -725,11 +773,12 @@ function arrancar() {
   $("app").style.display = "block";
   render();
   puxarRemoto(false);
+  ligarFluxo();
   setInterval(() => {
     if (document.visibilityState === "visible") puxarRemoto(false);
-  }, 20000);
+  }, 60000);
   document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible") puxarRemoto(false);
+    if (document.visibilityState === "visible") { puxarRemoto(false); ligarFluxo(); }
   });
 }
 
@@ -745,8 +794,8 @@ function abrirFicha(id) {
   const pos = sl.order.indexOf(id);
   const podeLigar = pos >= 0 && pos < sl.order.length - 1;
   $("ficha-membros").innerHTML = MEMBROS.map(m =>
-    '<label for="nota-' + m.id + '">' + esc(m.nome) + ' · ' + esc(m.instr) + '</label>' +
-    '<input id="nota-' + m.id + '" placeholder="—" value="' + esc((s.notas && s.notas[m.id]) || "") + '">'
+    '<label for="nota-' + m.id + '">' + esc(m.nome) + '</label>' +
+    '<input id="nota-' + m.id + '" value="' + esc((s.notas && s.notas[m.id]) || "") + '">'
   ).join("") + (podeLigar
     ? '<div class="ficha-segue"><input type="checkbox" id="nota-segue"' + (sl.segues && sl.segues[id] ? " checked" : "") + '><label for="nota-segue" style="margin:0;text-transform:none;letter-spacing:0;font-size:14px;color:var(--text);">Ligada à música seguinte (sem pausa)</label></div>'
     : "");
@@ -823,7 +872,7 @@ function gerarPDF(membroId) {
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(10);
-  doc.text("R O C K E N W I S E", 105, 14, { align: "center" });
+  doc.text("G L O C K E N W I S E", 105, 14, { align: "center" });
 
   doc.setFontSize(24);
   doc.text(trunca(doc, sl.name.toUpperCase(), MAXW, 24), L, 27);
