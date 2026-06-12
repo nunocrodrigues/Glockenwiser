@@ -281,6 +281,19 @@ function esc(s) {
   return s.replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
 
+function sanear(d) {
+  if (!d || typeof d !== "object") return null;
+  d.songs = Array.isArray(d.songs) ? d.songs.filter(s => s && s.id && typeof s.title === "string" && typeof s.dur === "number") : [];
+  d.setlists = Array.isArray(d.setlists) ? d.setlists.filter(s => s && s.id && typeof s.name === "string") : [];
+  if (d.setlists.length === 0) d.setlists = [{ id: "sl-inicial", name: "Setlist 1", order: [] }];
+  const ids = new Set(d.songs.map(s => s.id));
+  d.setlists.forEach(sl => {
+    sl.order = Array.isArray(sl.order) ? sl.order.filter(x => ids.has(x)) : [];
+  });
+  d.rev = typeof d.rev === "number" ? d.rev : 0;
+  return d;
+}
+
 function ativa() {
   return estado.setlists.find(s => s.id === ativoId) || estado.setlists[0];
 }
@@ -328,7 +341,7 @@ async function puxarRemoto(manual) {
   try {
     const r = await fetch(configUrl);
     if (!r.ok) throw new Error("HTTP " + r.status);
-    const remoto = await r.json();
+    const remoto = sanear(await r.json());
     $("aviso-offline").style.display = "none";
     if (remoto === null) { guardarRemoto(); return; }
     if (remoto.rev > estado.rev) {
@@ -606,8 +619,8 @@ function arrancar() {
   try {
     const guardado = localStorage.getItem(LS_DADOS);
     if (guardado) {
-      estado = JSON.parse(guardado);
-      ativoId = estado.setlists[0].id;
+      const s = sanear(JSON.parse(guardado));
+      if (s) { estado = s; ativoId = estado.setlists[0].id; }
     }
   } catch (e) {}
   configUrl = DB_EMBUTIDO || (function () {
