@@ -105,7 +105,9 @@
   .topo select { width: auto; flex: 1; min-width: 140px; font-weight: 800; font-family: var(--display); letter-spacing: 0.5px; }
   #estado-sync { font-size: 12px; color: var(--suave); min-width: 80px; }
   .aviso { display: flex; align-items: center; gap: 10px; font-size: 12px; color: #E8865C; margin-bottom: 12px; flex-wrap: wrap; }
-  .linha-form { display: flex; gap: 6px; margin-bottom: 14px; }
+  .linha-form { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; align-items: center; }
+  .linha-form input:not([type="date"]) { flex: 1; min-width: 140px; }
+  .lbl-data { font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--suave); }
 
   .grelha { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 10px; }
   @media (max-width: 600px) {
@@ -242,18 +244,20 @@
     <select id="sel-setlist" aria-label="Escolher setlist"></select>
     <button id="btn-renomear">renomear</button>
     <button id="btn-duplicar">duplicar</button>
-    <button id="btn-nova">+ nova</button>
+    <button id="btn-nova" aria-label="Nova setlist">+</button>
     <button id="btn-apagar-sl" class="btn-perigo">apagar</button>
-    <button id="btn-atualizar">atualizar</button>
     <span id="estado-sync"></span>
   </div>
   <div class="linha-form" id="form-renomear" style="display:none;">
     <input id="inp-renomear" placeholder="Novo nome…">
+    <span class="lbl-data">data</span>
     <input type="date" id="inp-data" style="width:auto;" aria-label="Data do concerto">
     <button id="btn-renomear-ok">ok</button>
   </div>
   <div class="linha-form" id="form-nova" style="display:none;">
     <input id="inp-nova" placeholder="Nome da nova setlist…">
+    <span class="lbl-data">data</span>
+    <input type="date" id="inp-data-nova" style="width:auto;" aria-label="Data do concerto">
     <button id="btn-nova-ok">criar</button>
   </div>
   <div class="aviso" id="aviso-offline" style="display:none;">
@@ -679,10 +683,16 @@ $("btn-nova-ok").addEventListener("click", criarSetlist);
 $("inp-nova").addEventListener("keydown", e => { if (e.key === "Enter") criarSetlist(); });
 function criarSetlist() {
   const nome = $("inp-nova").value.trim() || "Setlist " + (estado.setlists.length + 1);
+  const data = $("inp-data-nova").value;
   const id = uid();
-  mutar(d => { d.setlists.push({ id, name: nome, order: [] }); });
+  mutar(d => {
+    const nova = { id, name: nome, order: [] };
+    if (data) nova.date = data;
+    d.setlists.push(nova);
+  });
   ativoId = id;
   $("inp-nova").value = "";
+  $("inp-data-nova").value = "";
   $("form-nova").style.display = "none";
   render();
 }
@@ -734,8 +744,6 @@ $("btn-duplicar").addEventListener("click", () => {
   render();
   setEstadoSync("setlist duplicada", true);
 });
-
-$("btn-atualizar").addEventListener("click", () => puxarRemoto(true));
 
 $("btn-copiar").addEventListener("click", async () => {
   const sl = ativa();
