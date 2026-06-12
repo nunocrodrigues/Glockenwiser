@@ -11,6 +11,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@600;800;900&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
   :root {
     --bg: #1D140E;
@@ -107,6 +108,9 @@
   .linha-form { display: flex; gap: 6px; margin-bottom: 14px; }
 
   .grelha { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 10px; }
+  @media (max-width: 600px) {
+    .grelha { grid-template-columns: minmax(0,1fr); }
+  }
   .coluna { background: var(--col); border-radius: 12px; padding: 10px; min-height: 240px; }
   .coluna.alvo-set { outline: 2px solid var(--accent); }
   .coluna.alvo-pool { outline: 2px solid var(--suave); }
@@ -143,6 +147,46 @@
   .dur { font-size: 13px; color: var(--suave); font-variant-numeric: tabular-nums; font-family: ui-monospace, monospace; flex-shrink: 0; }
   .cartao.sel .dur { color: var(--accent); }
   .btn-x { padding: 2px 7px; font-size: 12px; flex-shrink: 0; }
+  .btn-i { padding: 2px 8px; font-size: 12px; flex-shrink: 0; border-radius: 999px; }
+  .btn-i.tem { color: var(--accent); border-color: rgba(216,243,204,0.4); }
+  .bd { font-size: 10px; color: var(--accent); opacity: 0.75; letter-spacing: 1px; margin-left: 6px; font-family: var(--display); font-weight: 600; }
+  .minha-nota { font-size: 12px; color: var(--accent); margin-top: 2px; opacity: 0.9; white-space: normal; }
+  .cartao.liga { margin-bottom: -5px; }
+  .cartao.liga-seg { position: relative; box-shadow: 0 -3px 8px rgba(0,0,0,0.4); }
+  .cartao.liga-seg::before {
+    content: "⌁";
+    position: absolute;
+    top: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: var(--accent);
+    font-size: 12px;
+    line-height: 1;
+    text-shadow: 0 0 8px rgba(216,243,204,0.5);
+    pointer-events: none;
+  }
+  .ficha-segue { display: flex; align-items: center; gap: 10px; margin-top: 16px; font-size: 14px; color: var(--text); }
+  .ficha-segue input { width: auto; accent-color: #D8F3CC; }
+
+  .veu { position: fixed; inset: 0; background: rgba(15,10,7,0.7); z-index: 70; }
+  .folha {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    max-height: 80vh;
+    overflow-y: auto;
+    background: var(--col);
+    border-top: 2px solid var(--linha);
+    border-radius: 16px 16px 0 0;
+    padding: 18px 16px 28px;
+    z-index: 80;
+  }
+  .folha h3 { font-family: var(--display); font-weight: 800; font-size: 17px; color: var(--accent); margin-bottom: 14px; letter-spacing: 0.5px; }
+  .folha label { display: block; font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--suave); margin: 12px 0 4px; }
+  .folha .btn-largo { margin-top: 18px; }
+  .pdf-opcoes { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+  .pdf-opcoes button { padding: 10px; font-size: 14px; text-align: left; }
+  .rodape-app { margin: -4px 0 14px; display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--suave); }
+  .rodape-app select { width: auto; font-size: 13px; padding: 5px 8px; }
   .btn-x.armado { background: var(--perigo); border-color: var(--perigo); color: #fff; }
   .btn-perigo.armado { background: var(--perigo); border-color: var(--perigo); color: #fff; }
 
@@ -204,6 +248,7 @@
   </div>
   <div class="linha-form" id="form-renomear" style="display:none;">
     <input id="inp-renomear" placeholder="Novo nome…">
+    <input type="date" id="inp-data" style="width:auto;" aria-label="Data do concerto">
     <button id="btn-renomear-ok">ok</button>
   </div>
   <div class="linha-form" id="form-nova" style="display:none;">
@@ -212,6 +257,13 @@
   </div>
   <div class="aviso" id="aviso-offline" style="display:none;">
     <span>Sem ligação — alterações guardadas neste dispositivo; sincronizam quando houver rede.</span>
+  </div>
+
+  <div class="rodape-app">
+    <span>Eu sou:</span>
+    <select id="sel-quem" aria-label="Identificar membro">
+      <option value="">— escolher —</option>
+    </select>
   </div>
 
   <div class="grelha">
@@ -223,6 +275,7 @@
         <span class="total" id="total">0:00</span>
       </div>
       <button class="btn-largo" id="btn-copiar" style="display:none;">copiar alinhamento</button>
+      <button class="btn-largo" id="btn-pdf" style="display:none;">pdf de palco</button>
     </div>
     <div class="coluna" data-col="pool" id="col-pool">
       <div class="titulo-col pool">De fora</div>
@@ -240,12 +293,39 @@
   <p class="lema">O mais importante é não confundir velocidade com andamento.</p>
 </div>
 
+<div class="veu" id="veu" style="display:none;"></div>
+
+<div class="folha" id="ficha" style="display:none;">
+  <h3 id="ficha-titulo"></h3>
+  <label for="nota-geral">Nota geral (para todos)</label>
+  <input id="nota-geral" placeholder="ex.: afinação drop D, intro só bateria…">
+  <div id="ficha-membros"></div>
+  <button class="btn-largo" id="ficha-fechar">guardar e fechar</button>
+</div>
+
+<div class="folha" id="pdf-menu" style="display:none;">
+  <h3>PDF de palco</h3>
+  <div class="pdf-opcoes" id="pdf-opcoes"></div>
+</div>
+
 <div id="fantasma"></div>
 
 <script>
 const DB_EMBUTIDO = "https://glockenwiser-default-rtdb.europe-west1.firebasedatabase.app/alinhamentos/zfYeje-aWo2LsnNKIc8ilI5Z.json";
 const LS_DADOS = "alinhamentos-dados-v1";
 const LS_CONFIG = "alinhamentos-config-v1";
+const LS_QUEM = "alinhamentos-quem-v1";
+
+const MEMBROS = [
+  { id: "nuno", nome: "Nuno", instr: "Voz, Guitarra", ini: "N" },
+  { id: "rafa", nome: "Rafa", instr: "Guitarra", ini: "R" },
+  { id: "claudio", nome: "Cláudio", instr: "Bateria", ini: "C" },
+  { id: "fiusa", nome: "Fiusa", instr: "Baixo", ini: "F" },
+  { id: "gil", nome: "Gil", instr: "Voz, Guitarra", ini: "G" },
+  { id: "sergio", nome: "Sérgio", instr: "Teclados", ini: "S" }
+];
+
+let quem = "";
 
 let estado = { songs: [], setlists: [{ id: "sl-inicial", name: "Setlist 1", order: [] }], rev: 0 };
 let ativoId = "sl-inicial";
@@ -283,12 +363,29 @@ function esc(s) {
 
 function sanear(d) {
   if (!d || typeof d !== "object") return null;
+  const mIds = new Set(MEMBROS.map(m => m.id));
   d.songs = Array.isArray(d.songs) ? d.songs.filter(s => s && s.id && typeof s.title === "string" && typeof s.dur === "number") : [];
+  d.songs.forEach(s => {
+    if (typeof s.nota !== "string") delete s.nota;
+    const n = {};
+    if (s.notas && typeof s.notas === "object" && !Array.isArray(s.notas)) {
+      Object.keys(s.notas).forEach(k => {
+        if (mIds.has(k) && typeof s.notas[k] === "string" && s.notas[k]) n[k] = s.notas[k];
+      });
+    }
+    s.notas = n;
+  });
   d.setlists = Array.isArray(d.setlists) ? d.setlists.filter(s => s && s.id && typeof s.name === "string") : [];
   if (d.setlists.length === 0) d.setlists = [{ id: "sl-inicial", name: "Setlist 1", order: [] }];
   const ids = new Set(d.songs.map(s => s.id));
   d.setlists.forEach(sl => {
     sl.order = Array.isArray(sl.order) ? sl.order.filter(x => ids.has(x)) : [];
+    if (typeof sl.date !== "string") delete sl.date;
+    const seg = {};
+    if (sl.segues && typeof sl.segues === "object" && !Array.isArray(sl.segues)) {
+      Object.keys(sl.segues).forEach(k => { if (ids.has(k) && sl.segues[k]) seg[k] = true; });
+    }
+    sl.segues = seg;
   });
   d.rev = typeof d.rev === "number" ? d.rev : 0;
   return d;
@@ -388,12 +485,22 @@ function apagarMusica(id) {
   });
 }
 
-function cartaoHTML(s, inSet, idx) {
+function cartaoHTML(s, inSet, idx, liga, ligaSeg) {
   const arm = armado === "m-" + s.id;
-  return '<div class="cartao' + (inSet ? " sel" : "") + (drag && drag.songId === s.id ? " fantasma-origem" : "") + '" data-id="' + s.id + '"' + (inSet ? ' data-setidx="' + idx + '"' : "") + '>' +
+  const temNotas = !!(s.nota || Object.keys(s.notas || {}).length);
+  const bd = MEMBROS.filter(m => s.notas && s.notas[m.id]).map(m => m.ini).join("·");
+  const minha = quem && s.notas && s.notas[quem] ? s.notas[quem] : "";
+  return '<div class="cartao' + (inSet ? " sel" : "") + (liga ? " liga" : "") + (ligaSeg ? " liga-seg" : "") + (drag && drag.songId === s.id ? " fantasma-origem" : "") + '" data-id="' + s.id + '"' + (inSet ? ' data-setidx="' + idx + '"' : "") + '>' +
     '<div class="pega" data-pega="' + s.id + '" data-de="' + (inSet ? "set" : "pool") + '" aria-label="Arrastar ' + esc(s.title) + '">⠿</div>' +
-    '<div class="cartao-titulo">' + (inSet ? '<span class="num">' + (idx + 1) + '.</span>' : "") + esc(s.title) + '</div>' +
+    '<div class="cartao-titulo">' +
+      '<div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' +
+        (inSet ? '<span class="num">' + (idx + 1) + '.</span>' : "") + esc(s.title) +
+        (bd ? '<span class="bd">' + bd + '</span>' : "") +
+      '</div>' +
+      (minha && inSet ? '<div class="minha-nota">' + esc(minha) + '</div>' : "") +
+    '</div>' +
     '<div class="dur">' + fmt(s.dur) + '</div>' +
+    '<button class="btn-i' + (temNotas ? " tem" : "") + '" data-i="' + s.id + '" aria-label="Notas de ' + esc(s.title) + '">ⓘ</button>' +
     (!inSet ? '<button class="btn-x' + (arm ? " armado" : "") + '" data-x="' + s.id + '" aria-label="Apagar ' + esc(s.title) + '">' + (arm ? "apagar?" : "×") + '</button>' : "") +
     '</div>';
 }
@@ -411,7 +518,9 @@ function render() {
   let htmlSet = "";
   set.forEach((s, i) => {
     if (drag && hoverAlvo && hoverAlvo.col === "set" && hoverAlvo.idx === i) htmlSet += '<div class="insercao"></div>';
-    htmlSet += cartaoHTML(s, true, i);
+    const liga = !drag && !!(sl.segues && sl.segues[s.id]) && i < set.length - 1;
+    const ligaSeg = !drag && i > 0 && !!(sl.segues && sl.segues[set[i - 1].id]);
+    htmlSet += cartaoHTML(s, true, i, liga, ligaSeg);
   });
   if (drag && hoverAlvo && hoverAlvo.col === "set" && hoverAlvo.idx === set.length) htmlSet += '<div class="insercao"></div>';
   if (set.length === 0 && !drag) htmlSet = '<div class="vazio">Toca numa música da direita, ou arrasta-a pelo ⠿ para aqui.</div>';
@@ -425,6 +534,7 @@ function render() {
   $("total").textContent = fmt(total);
   $("contagem").textContent = set.length + " música" + (set.length === 1 ? "" : "s");
   $("btn-copiar").style.display = set.length ? "block" : "none";
+  $("btn-pdf").style.display = set.length ? "block" : "none";
 
   const armSL = armado === "setlist";
   const b = $("btn-apagar-sl");
@@ -505,6 +615,8 @@ document.addEventListener("pointerup", fimDrag);
 document.addEventListener("pointercancel", fimDrag);
 
 document.addEventListener("click", e => {
+  const i = e.target.closest("[data-i]");
+  if (i) { abrirFicha(i.getAttribute("data-i")); return; }
   const x = e.target.closest("[data-x]");
   if (x) { apagarMusica(x.getAttribute("data-x")); return; }
   if (e.target.closest("[data-pega]")) return;
@@ -546,6 +658,7 @@ function criarSetlist() {
 
 $("btn-renomear").addEventListener("click", () => {
   $("inp-renomear").value = ativa().name;
+  $("inp-data").value = ativa().date || "";
   $("form-renomear").style.display = "flex";
   $("topo-normal").style.display = "none";
   $("inp-renomear").focus();
@@ -554,7 +667,12 @@ $("btn-renomear-ok").addEventListener("click", renomear);
 $("inp-renomear").addEventListener("keydown", e => { if (e.key === "Enter") renomear(); });
 function renomear() {
   const nome = $("inp-renomear").value.trim();
-  if (nome) mutar(d => { d.setlists.find(s => s.id === ativa().id).name = nome; });
+  const data = $("inp-data").value;
+  mutar(d => {
+    const sl = d.setlists.find(s => s.id === ativa().id);
+    if (nome) sl.name = nome;
+    if (data) sl.date = data; else delete sl.date;
+  });
   $("form-renomear").style.display = "none";
   $("topo-normal").style.display = "flex";
 }
@@ -614,6 +732,163 @@ function arrancar() {
     if (document.visibilityState === "visible") puxarRemoto(false);
   });
 }
+
+let fichaId = null;
+
+function abrirFicha(id) {
+  const s = estado.songs.find(x => x.id === id);
+  if (!s) return;
+  fichaId = id;
+  $("ficha-titulo").textContent = s.title;
+  $("nota-geral").value = s.nota || "";
+  const sl = ativa();
+  const pos = sl.order.indexOf(id);
+  const podeLigar = pos >= 0 && pos < sl.order.length - 1;
+  $("ficha-membros").innerHTML = MEMBROS.map(m =>
+    '<label for="nota-' + m.id + '">' + esc(m.nome) + ' · ' + esc(m.instr) + '</label>' +
+    '<input id="nota-' + m.id + '" placeholder="—" value="' + esc((s.notas && s.notas[m.id]) || "") + '">'
+  ).join("") + (podeLigar
+    ? '<div class="ficha-segue"><input type="checkbox" id="nota-segue"' + (sl.segues && sl.segues[id] ? " checked" : "") + '><label for="nota-segue" style="margin:0;text-transform:none;letter-spacing:0;font-size:14px;color:var(--text);">Ligada à música seguinte (sem pausa)</label></div>'
+    : "");
+  $("veu").style.display = "block";
+  $("ficha").style.display = "block";
+}
+
+function fecharFicha() {
+  if (fichaId) {
+    const id = fichaId;
+    const geral = $("nota-geral").value.trim();
+    const notas = {};
+    MEMBROS.forEach(m => {
+      const v = $("nota-" + m.id).value.trim();
+      if (v) notas[m.id] = v;
+    });
+    const segueEl = document.getElementById("nota-segue");
+    const segue = segueEl ? segueEl.checked : null;
+    mutar(d => {
+      const s = d.songs.find(x => x.id === id);
+      if (!s) return;
+      if (geral) s.nota = geral; else delete s.nota;
+      s.notas = notas;
+      if (segue !== null) {
+        const sl = d.setlists.find(x => x.id === ativa().id);
+        if (sl) {
+          if (!sl.segues) sl.segues = {};
+          if (segue) sl.segues[id] = true; else delete sl.segues[id];
+        }
+      }
+    });
+  }
+  fichaId = null;
+  $("veu").style.display = "none";
+  $("ficha").style.display = "none";
+  $("pdf-menu").style.display = "none";
+}
+
+$("ficha-fechar").addEventListener("click", fecharFicha);
+$("veu").addEventListener("click", fecharFicha);
+
+$("btn-pdf").addEventListener("click", () => {
+  $("pdf-opcoes").innerHTML =
+    '<button data-pdf="">Geral — alinhamento da banda</button>' +
+    MEMBROS.map(m => '<button data-pdf="' + m.id + '">' + esc(m.nome) + ' — com as notas dele</button>').join("");
+  $("veu").style.display = "block";
+  $("pdf-menu").style.display = "block";
+});
+
+$("pdf-opcoes").addEventListener("click", e => {
+  const b = e.target.closest("[data-pdf]");
+  if (!b) return;
+  gerarPDF(b.getAttribute("data-pdf") || null);
+  fecharFicha();
+});
+
+function dataPT(iso) {
+  if (!iso) return "";
+  const [a, m, d] = iso.split("-");
+  return d + "/" + m + "/" + a;
+}
+
+function gerarPDF(membroId) {
+  if (!window.jspdf) { setEstadoSync("pdf indisponível (sem rede?)", true); return; }
+  const { jsPDF } = window.jspdf;
+  const sl = ativa();
+  const porId = Object.fromEntries(estado.songs.map(s => [s.id, s]));
+  const set = sl.order.map(id => porId[id]).filter(Boolean);
+  if (!set.length) return;
+  const membro = membroId ? MEMBROS.find(m => m.id === membroId) : null;
+
+  const doc = new jsPDF({ unit: "mm", format: "a4" });
+  const L = 18, R = 192, MAXW = R - L;
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.text("R O C K E N W I S E", 105, 14, { align: "center" });
+
+  doc.setFontSize(24);
+  doc.text(trunca(doc, sl.name.toUpperCase(), MAXW, 24), L, 27);
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(11);
+  const sub = [dataPT(sl.date), membro ? membro.nome + " (" + membro.instr + ")" : ""].filter(Boolean).join("   ·   ");
+  if (sub) doc.text(sub, L, 34);
+  doc.setLineWidth(0.5);
+  doc.line(L, 38, R, 38);
+
+  const itens = set.map((s, i) => {
+    const partes = [];
+    if (s.nota) partes.push(s.nota);
+    if (membro && s.notas && s.notas[membro.id]) partes.push(s.notas[membro.id]);
+    return {
+      titulo: (i + 1) + ". " + s.title.toUpperCase() + (sl.segues && sl.segues[s.id] && i < set.length - 1 ? "  \u2192" : ""),
+      nota: partes.join("  ·  ")
+    };
+  });
+
+  const y0 = 46, yMax = 285;
+  const unidades = itens.reduce((a, it) => a + (it.nota ? 1.45 : 1), 0);
+  const lh = (yMax - y0) / unidades;
+  let pt = Math.max(12, Math.min(46, (lh * 0.62) / 0.3528));
+  const ptNota = Math.max(9, pt * 0.42);
+
+  let y = y0;
+  itens.forEach(it => {
+    const h = lh * (it.nota ? 1.45 : 1);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(pt);
+    doc.text(trunca(doc, it.titulo, MAXW, pt), L, y + h * (it.nota ? 0.42 : 0.62) + pt * 0.12);
+    if (it.nota) {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(ptNota);
+      doc.text(trunca(doc, it.nota, MAXW - 8, ptNota), L + 8, y + h * 0.82);
+    }
+    y += h;
+  });
+
+  const nome = (sl.name + (membro ? "-" + membro.nome : "")).toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  doc.save((nome || "setlist") + ".pdf");
+}
+
+function trunca(doc, txt, maxW, pt) {
+  doc.setFontSize(pt);
+  if (doc.getTextWidth(txt) <= maxW) return txt;
+  let t = txt;
+  while (t.length > 2 && doc.getTextWidth(t + "…") > maxW) t = t.slice(0, -1);
+  return t + "…";
+}
+
+(function initQuem() {
+  try { quem = localStorage.getItem(LS_QUEM) || ""; } catch (e) {}
+  const sel = $("sel-quem");
+  sel.innerHTML = '<option value="">— escolher —</option>' +
+    MEMBROS.map(m => '<option value="' + m.id + '"' + (m.id === quem ? " selected" : "") + '>' + esc(m.nome) + '</option>').join("");
+  sel.addEventListener("change", e => {
+    quem = e.target.value;
+    try { localStorage.setItem(LS_QUEM, quem); } catch (err) {}
+    render();
+  });
+})();
 
 (function init() {
   try {
