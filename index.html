@@ -897,8 +897,9 @@ function gerarPDF(membroId) {
     if (s.nota) partes.push(s.nota);
     if (membro && s.notas && s.notas[membro.id]) partes.push(s.notas[membro.id]);
     return {
-      titulo: (i + 1) + ". " + s.title.toUpperCase() + (sl.segues && sl.segues[s.id] && i < set.length - 1 ? "  \u2192" : ""),
-      nota: partes.join("  ·  ")
+      titulo: (i + 1) + ". " + s.title.toUpperCase(),
+      nota: partes.join("  ·  "),
+      ligaSeguinte: !!(sl.segues && sl.segues[s.id]) && i < set.length - 1
     };
   });
 
@@ -908,19 +909,51 @@ function gerarPDF(membroId) {
   let pt = Math.max(12, Math.min(46, (lh * 0.62) / 0.3528));
   const ptNota = Math.max(9, pt * 0.42);
 
+  // marcar grupos: cada música pertence a um grupo se está ligada à seguinte ou a anterior está ligada a ela
+  const grupo = itens.map(() => false);
+  itens.forEach((it, i) => {
+    if (it.ligaSeguinte) { grupo[i] = true; grupo[i + 1] = true; }
+  });
+  const temGrupos = grupo.some(Boolean);
+  const indent = temGrupos ? 7 : 0; // mm fixos à esquerda para a chaveta (não proporcional ao corpo)
+
   let y = y0;
-  itens.forEach(it => {
+  const ys = []; // topo e base de cada item, para desenhar as chavetas depois
+  itens.forEach((it, i) => {
     const h = lh * (it.nota ? 1.45 : 1);
+    const x = L + (grupo[i] ? indent : 0);
+    ys.push({ topo: y, base: y + h, g: grupo[i] });
     doc.setFont("helvetica", "bold");
     doc.setFontSize(pt);
-    doc.text(trunca(doc, it.titulo, MAXW, pt), L, y + h * (it.nota ? 0.42 : 0.62) + pt * 0.12);
+    doc.text(trunca(doc, it.titulo, MAXW - (grupo[i] ? indent : 0), pt), x, y + h * (it.nota ? 0.42 : 0.62) + pt * 0.12);
     if (it.nota) {
       doc.setFont("helvetica", "normal");
       doc.setFontSize(ptNota);
-      doc.text(trunca(doc, it.nota, MAXW - 8, ptNota), L + 8, y + h * 0.82);
+      doc.text(trunca(doc, it.nota, MAXW - 8 - (grupo[i] ? indent : 0), ptNota), x + 8, y + h * 0.82);
     }
     y += h;
   });
+
+  // desenhar uma chaveta por cada cadeia contígua de músicas agrupadas
+  doc.setLineWidth(0.7);
+  let i = 0;
+  while (i < itens.length) {
+    if (grupo[i]) {
+      let j = i;
+      while (j + 1 < itens.length && grupo[j + 1] && itens[j].ligaSeguinte) j++;
+      const topo = ys[i].topo + lh * 0.18;
+      const base = ys[j].base - lh * 0.18;
+      const meio = (topo + base) / 2;
+      const bx = L + 3.5;  // haste vertical da chaveta
+      doc.line(bx, topo, bx, base);              // haste
+      doc.line(bx, topo, bx + 2.2, topo);        // ponta superior
+      doc.line(bx, base, bx + 2.2, base);        // ponta inferior
+      doc.line(bx, meio, bx - 2.2, meio);        // bico central a apontar para fora
+      i = j + 1;
+    } else {
+      i++;
+    }
+  }
 
   const nome = (sl.name + (membro ? "-" + membro.nome : "")).toLowerCase()
     .normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
